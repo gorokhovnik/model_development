@@ -603,7 +603,7 @@ class FE:
         tor['description'] = tor['feature'].apply(self.feature_description)
 
         max_pay_fltr = max([len(feature_pay_fltr(feature)) for feature in features])
-        for i in range(1, max_pay_fltr):
+        for i in range(1, max_pay_fltr + 1):
             tor['pay_flt' + str(i)] = np.where(is_name(tor['feature']),
                                                tor['feature'].apply(partial(get_n_pay_flt, n=i)).apply(common_flt),
                                                '')
