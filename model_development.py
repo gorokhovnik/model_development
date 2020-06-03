@@ -316,7 +316,8 @@ class Summary:
             _mode_ = mode(df_[feat])[0][0] if _na_count_ < n else np.nan
         if self.__mode_to_summary:
             feat_summary['mode'] = [_mode_]
-        if self.__mode_freq_to_summary or self.__score_fillna_to_summary or self.__score_avg_fillna_to_summary:
+        if self.__mode_freq_to_summary or self.__score_fillna_to_summary or self.__score_avg_fillna_to_summary or \
+                self.__score_to_summary or self.__score_avg_to_summary:
             _mode_freq_ = df_[feat].value_counts(dropna=False).max() / n
         if self.__mode_freq_to_summary:
             feat_summary['mode_freq'] = [_mode_freq_]
