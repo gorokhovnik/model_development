@@ -98,29 +98,8 @@ def gini_avg_score(y_true,
                 score += gini_score(y_true=y_true_grp,
                                     y_score=np.array(y_score)[grp],
                                     average=average,
-                                    sample_weight=sample_weight) * sum(sample_weight_) / n
+                                    sample_weight=sample_weight_) * sum(sample_weight_) / n
     return score
-
-
-def lgb_gini_avg_valid(y_pred, data):
-    y_true = data.get_label()
-    y_group = data.get_weight()
-    df = pd.concat([pd.Series(y_true).rename('t'), pd.Series(y_pred).rename('p'), pd.Series(y_group).rename('g')],
-                   axis=1)
-    gini = gini_avg_score(df['t'], df['p'], y_group=df['g'])
-    return 'gini_avg', gini, True
-
-
-def gini_score_with_num_limit(y_true,
-                              y_score,
-                              average="macro",
-                              sample_weight=None,
-                              num_limit=None):
-    if num_limit is None or np.sum(y_true) > num_limit:
-        return 2 * roc_auc_score(y_true=y_true,
-                                 y_score=y_score,
-                                 average=average,
-                                 sample_weight=sample_weight) - 1
 
 
 class Log:
