@@ -309,7 +309,7 @@ class Summary:
         if self.__na_count_to_summary or self.__score_fillna_to_summary or self.__score_avg_fillna_to_summary or \
                 self.__score_to_summary or self.__score_avg_to_summary:
             _na_count_ = df_[feat].isna().sum()
-        if self.__na_count_to_summary or self.__score_fillna_to_summary or self.__score_avg_fillna_to_summary:
+        if self.__na_count_to_summary:
             feat_summary['na_count'] = [_na_count_]
 
         if self.__mode_to_summary or self.__score_fillna_to_summary or self.__score_avg_fillna_to_summary:
