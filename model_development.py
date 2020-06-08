@@ -533,8 +533,9 @@ class Stability:
         self.__max_changed_sign_limit = max_changed_sign_limit
         self.__max_fell_limit = max_fell_limit
         norm_sign_fall_feat = pool_map(func=self._feature_fall_and_sign_change,
-                                       iterable=[self.__data[[feature, self.__target] + self.__stable_by]
-                                                 for feature in self.__features],
+                                       iterable=[
+                                           self.__data[[feature, self.__target] + self.__stable_by + self.__group_by]
+                                           for feature in self.__features],
                                        n_threads=n_threads)
 
         features_fell = [f for i, f in enumerate(self.__features) if norm_sign_fall_feat[i] == 1]
