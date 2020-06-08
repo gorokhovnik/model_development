@@ -490,6 +490,8 @@ class Stability:
             return 1
         if changed_sign > self.__changed_sign_limit:
             return 2
+        if fell + changed_sign > self.__total_limit:
+            return 3
 
         if len(self.__group_by) > 0:
             base_gini = pd.DataFrame(df.groupby(self.__group_by).apply(
@@ -504,11 +506,14 @@ class Stability:
             gini = gini[self.__group_by + ['fell', 'changed_sign']].groupby(self.__group_by).sum()
             max_fell = np.max(gini['fell'])
             max_changed_sign = np.max(gini['changed_sign'])
+            max_total = np.max(gini['fell'] + gini['changed_sign'])
 
             if max_fell > self.__max_fell_limit:
                 return 1
             if max_changed_sign > self.__max_changed_sign_limit:
                 return 2
+            if max_total > self.__max_total_limit:
+                return 3
 
         return 0
 
@@ -520,8 +525,10 @@ class Stability:
                                       decrease_limit=3,
                                       fell_limit=0,
                                       changed_sign_limit=0,
+                                      total_limit=np.inf,
                                       max_fell_limit=0,
                                       max_changed_sign_limit=0,
+                                      max_total_limit=np.inf,
                                       n_threads=1):
         self.__target = target
         self.__stable_by = stable_by if isinstance(stable_by, list) else [stable_by]
@@ -530,8 +537,10 @@ class Stability:
         self.__decrease_limit = decrease_limit
         self.__changed_sign_limit = changed_sign_limit
         self.__fell_limit = fell_limit
+        self.__total_limit = total_limit
         self.__max_changed_sign_limit = max_changed_sign_limit
         self.__max_fell_limit = max_fell_limit
+        self.__max_total_limit = max_total_limit
         norm_sign_fall_feat = pool_map(func=self._feature_fall_and_sign_change,
                                        iterable=[
                                            self.__data[[feature, self.__target] + self.__stable_by + self.__group_by]
@@ -540,8 +549,9 @@ class Stability:
 
         features_fell = [f for i, f in enumerate(self.__features) if norm_sign_fall_feat[i] == 1]
         features_changed_sign = [f for i, f in enumerate(self.__features) if norm_sign_fall_feat[i] == 2]
+        features_total = [f for i, f in enumerate(self.__features) if norm_sign_fall_feat[i] == 3]
 
-        return (features_fell, features_changed_sign)
+        return (features_fell, features_changed_sign, features_total)
 
     def _feature_population_stability_by_time(self,
                                               df):
