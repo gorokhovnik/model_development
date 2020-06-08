@@ -587,7 +587,7 @@ class Stability:
                                                return_all_distances=False,
                                                n_threads=1):
         self.__stable_by = stable_by
-        self.__stable_by_val = np.unique(stable_by)
+        self.__stable_by_val = np.unique(self.__data[stable_by])
         self.__metrics = metrics
         self.__minmax_norm = minmax_norm
 
@@ -629,7 +629,7 @@ class Stability:
                                        n_threads=1):
         self.__data_full = data_full
         self.__stable_by = stable_by
-        self.__stable_by_val = np.unique(stable_by)
+        self.__stable_by_val = np.unique(self.__data[stable_by])
         self.__metrics = metrics
         self.__minmax_norm = minmax_norm
 
