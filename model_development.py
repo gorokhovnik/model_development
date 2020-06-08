@@ -592,7 +592,7 @@ class Stability:
         self.__minmax_scale = minmax_scale
 
         distances = pool_map(func=self._feature_population_stability_by_time,
-                             iterable=[self.__data[[stable_by] + [feature]] for feature in self.__features],
+                             iterable=[self.__data[[stable_by, feature]] for feature in self.__features],
                              n_threads=n_threads)
         features_not_stable = [feature for feature, distance in zip(self.__features, distances) if distance > cutoff]
 
@@ -617,7 +617,21 @@ class Stability:
                 cur = self.__metrics(df_model, dfs)
             if cur > max_ws:
                 max_ws = cur
-        return np.max(max_ws)
+        return max_ws
+
+    def _feature_population_stability_(self,
+                                       df_dfmodel):
+        df = df_dfmodel[0].dropna()
+        df_model = df_dfmodel[1].dropna()
+        if self.__minmax_scale is not None:
+            q_model = np.quantile(df_model, [self.__minmax_scale, 1 - self.__minmax_scale])
+            q = np.quantile(df, [self.__minmax_scale, 1 - self.__minmax_scale])
+            cur_min = np.min([q[0], q_model[0]])
+            cur_max = np.max([q[1], q_model[1]])
+            max_ws = self.__metrics((df_model - cur_min) / (cur_max - cur_min), (df - cur_min) / (cur_max - cur_min))
+        else:
+            max_ws = self.__metrics(df_model, df)
+        return max_ws
 
     def features_not_stable_population(self,
                                        data_full,
@@ -629,14 +643,21 @@ class Stability:
                                        n_threads=1):
         self.__data_full = data_full
         self.__stable_by = stable_by
-        self.__stable_by_val = np.unique(self.__data[stable_by])
+        if stable_by is not None:
+            self.__stable_by_val = np.unique(self.__data[stable_by])
         self.__metrics = metrics
         self.__minmax_scale = minmax_scale
 
-        distances = pool_map(func=self._feature_population_stability,
-                             iterable=[(data_full[[self.__stable_by] + [feature]], self.__data[feature])
-                                       for feature in self.__features],
-                             n_threads=n_threads)
+        if stable_by is not None:
+            distances = pool_map(func=self._feature_population_stability,
+                                 iterable=[(data_full[[self.__stable_by, feature]], self.__data[feature])
+                                           for feature in self.__features],
+                                 n_threads=n_threads)
+        else:
+            distances = pool_map(func=self._feature_population_stability_,
+                                 iterable=[(data_full[feature], self.__data[feature])
+                                           for feature in self.__features],
+                                 n_threads=n_threads)
 
         features_not_stable = [feature for feature, distance in zip(self.__features, distances) if distance > cutoff]
 
