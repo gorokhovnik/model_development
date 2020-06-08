@@ -671,9 +671,12 @@ def get_lgb_features_importance(data,
                                 params=None,
                                 importance_type='gain',
                                 cv=StratifiedStratifiedKFold(5, True, 16777216)):
+    if group_by is not None:
+        group_by = data[group_by]
     if params is None:
         params = {}
 
+    use_early_stop = False
     for early_stop in ('early_stopping_round', 'early_stopping_rounds', 'early_stopping', 'n_iter_no_change'):
         if early_stop in params:
             if params[early_stop] > 0:
@@ -681,7 +684,7 @@ def get_lgb_features_importance(data,
 
     features_importance = pd.DataFrame()
 
-    for itr, iva in cv.split(data[features], data[target], data[group_by]):
+    for itr, iva in cv.split(data[features], data[target], group_by):
         xtr, ytr = data.iloc[itr][features], data.iloc[itr][target]
         trn_data = lgb.Dataset(xtr, ytr)
         if use_early_stop:
