@@ -563,12 +563,12 @@ class Stability:
         max_ws = -np.inf
         for v in self.__stable_by_val:
             dfs += [df[df[self.__stable_by] == v][feature].to_numpy()]
-            if self.__minmax_norm is not None:
-                q = np.quantile(dfs[-1], [self.__minmax_norm, 1 - self.__minmax_norm])
+            if self.__minmax_scale is not None:
+                q = np.quantile(dfs[-1], [self.__minmax_scale, 1 - self.__minmax_scale])
                 mins += [q[0]]
                 maxs += [q[1]]
         for idx in range(len(self.__stable_by_val) - 1):
-            if self.__minmax_norm is not None:
+            if self.__minmax_scale is not None:
                 cur_min = np.min(mins[idx:idx + 2])
                 cur_max = np.max(maxs[idx:idx + 2])
                 cur = self.__metrics((dfs[idx] - cur_min) / (cur_max - cur_min),
@@ -583,13 +583,13 @@ class Stability:
                                                stable_by,
                                                metrics=wasserstein_distance,
                                                cutoff=0.01,
-                                               minmax_norm=0.001,
+                                               minmax_scale=0.001,
                                                return_all_distances=False,
                                                n_threads=1):
         self.__stable_by = stable_by
         self.__stable_by_val = np.unique(self.__data[stable_by])
         self.__metrics = metrics
-        self.__minmax_norm = minmax_norm
+        self.__minmax_scale = minmax_scale
 
         distances = pool_map(func=self._feature_population_stability_by_time,
                              iterable=[self.__data[[stable_by] + [feature]] for feature in self.__features],
@@ -603,13 +603,13 @@ class Stability:
         df = df_dfmodel[0].dropna()
         feat = df.columns[-1]
         df_model = df_dfmodel[1].dropna().to_numpy()
-        if self.__minmax_norm is not None:
-            q_model = np.quantile(df_model, [self.__minmax_norm, 1 - self.__minmax_norm])
+        if self.__minmax_scale is not None:
+            q_model = np.quantile(df_model, [self.__minmax_scale, 1 - self.__minmax_scale])
         max_ws = 0
         for v in self.__stable_by_val:
             dfs = df[df[self.__stable_by] == v][feat].to_numpy()
-            if self.__minmax_norm is not None:
-                q = np.quantile(dfs, [self.__minmax_norm, 1 - self.__minmax_norm])
+            if self.__minmax_scale is not None:
+                q = np.quantile(dfs, [self.__minmax_scale, 1 - self.__minmax_scale])
                 cur_min = np.min([q[0], q_model[0]])
                 cur_max = np.max([q[1], q_model[1]])
                 cur = self.__metrics((df_model - cur_min) / (cur_max - cur_min), (dfs - cur_min) / (cur_max - cur_min))
@@ -624,14 +624,14 @@ class Stability:
                                        stable_by=None,
                                        metrics=wasserstein_distance,
                                        cutoff=0.01,
-                                       minmax_norm=0.001,
+                                       minmax_scale=0.001,
                                        return_all_distances=False,
                                        n_threads=1):
         self.__data_full = data_full
         self.__stable_by = stable_by
         self.__stable_by_val = np.unique(self.__data[stable_by])
         self.__metrics = metrics
-        self.__minmax_norm = minmax_norm
+        self.__minmax_scale = minmax_scale
 
         distances = pool_map(func=self._feature_population_stability,
                              iterable=[(data_full[[self.__stable_by] + [feature]], self.__data[feature])
