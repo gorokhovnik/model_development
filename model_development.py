@@ -671,7 +671,7 @@ def get_lgb_features_importance(data,
                                 group_by=None,
                                 params=None,
                                 importance_type='gain',
-                                cv=StratifiedStratifiedKFold(5, True, 16777216)):
+                                cv=5):
     if group_by is not None:
         group_by = data[group_by]
     if params is None:
@@ -683,9 +683,16 @@ def get_lgb_features_importance(data,
             if params[early_stop] > 0:
                 use_early_stop = True
 
+    if isinstance(cv, int):
+        cv = [i for i in StratifiedStratifiedKFold(cv, True, 16777216).split(data[features],
+                                                                             data[target],
+                                                                             group_by)]
+    elif not isinstance(cv, Iterable):
+        cv = [i for i in cv.split(data[features], data[target], group_by)]
+
     features_importance = pd.DataFrame()
 
-    for itr, iva in cv.split(data[features], data[target], group_by):
+    for itr, iva in cv:
         xtr, ytr = data.iloc[itr][features], data.iloc[itr][target]
         trn_data = lgb.Dataset(xtr, ytr)
         if use_early_stop:
@@ -800,13 +807,12 @@ class FS:
             for group in self.__group_by:
                 for value in np.unique(self.__data[group]):
                     self.__weights += [1]
+        elif isinstance(weights, dict):
+            self.__weights = [total_weight]
+            for group in self.__group_by:
+                self.__weights += weights[group]
         else:
-            if isinstance(weights, dict):
-                self.__weights = [total_weight]
-                for group in self.__group_by:
-                    self.__weights += weights[group]
-            else:
-                self.__weights = [total_weight] + weights
+            self.__weights = [total_weight] + weights
         self.__weights = np.array(self.__weights) / sum(self.__weights)
 
         self.__is_pos_diff = False
@@ -815,13 +821,12 @@ class FS:
             for group in self.__group_by:
                 for value in np.unique(self.__data[group]):
                     self.__pos_diff += [True]
+        elif isinstance(pos_diff, dict):
+            self.__pos_diff = [total_pos_diff]
+            for group in self.__group_by:
+                self.__pos_diff += pos_diff[group]
         else:
-            if isinstance(pos_diff, dict):
-                self.__pos_diff = [total_pos_diff]
-                for group in self.__group_by:
-                    self.__pos_diff += pos_diff[group]
-            else:
-                self.__pos_diff = [total_pos_diff] + pos_diff
+            self.__pos_diff = [total_pos_diff] + pos_diff
         for idx in range(len(self.__pos_diff)):
             if self.__pos_diff[idx] == 0 or not self.__pos_diff[idx]:
                 self.__pos_diff[idx] = False
