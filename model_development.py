@@ -1320,7 +1320,8 @@ class FS:
             if self.__selection_method == 'rank_by_score':
                 log['w'] = log['Weighted']
             elif self.__selection_method == 'rank_by_function':
-                log['w'] = [self.__rank_function(r=i, n=self.__n_estimation) for i in range(self.__n_estimation)]
+                log['w'] = [self.__rank_function(r=i, n=self.__n_estimation, s=log['Weighted'].iloc[i])
+                            for i in range(self.__n_estimation)]
             else:
                 log['w'] = [i for i in range(self.__n_estimation, 0, -1)]
             log = log[features + ['w']].apply(lambda x: x * log['w'])
