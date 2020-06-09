@@ -1691,7 +1691,7 @@ class FS:
             elif n_selection >= 1:
                 self.__n_selection = int(n_selection)
             elif n_selection > 0:
-                self.__n_selection = self.__n_estimation // (1 / n_selection)
+                self.__n_selection = int(self.__n_estimation // (1 / n_selection))
             elif selection_method[:4] == 'rank':
                 self.__n_selection = self.__n_estimation
             else:
