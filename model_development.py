@@ -1599,7 +1599,7 @@ class FS:
             cmd += ['c']
 
         selected = initial_features if initial_features is not None else self.__selected
-        not_selected = [f for f in self.__features if f not in selected]
+        not_selected = [f for f in self.__features if f not in selected + self.__dropped_from_selection]
         best_scores = self._scores(features=selected,
                                    n_threads=n_threads)
 
