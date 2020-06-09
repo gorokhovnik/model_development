@@ -1612,7 +1612,7 @@ class FS:
             self.__e_add['sf'] = max(self.__e_add['sf'], 0)
         else:
             self.__e_add = {t: max(eps_add, 0) for t in ['f', 'af', 'sf']}
-        if isinstance(eps_add, dict):
+        if isinstance(eps_drop, dict):
             self.__e_drop['b'] = eps_drop['sequential_backward'] if 'sequential_backward' in eps_drop else eps_drop['b']
             self.__e_drop['ab'] = eps_drop['all_backward'] if 'all_backward' in eps_drop else eps_drop['ab']
             self.__e_drop['sb'] = eps_drop['stepwise_backward'] if 'stepwise_backward' in eps_drop else eps_drop['sb']
