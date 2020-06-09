@@ -10,6 +10,7 @@ import datetime
 import time
 import os
 import re
+from collections.abc import Iterable
 from itertools import product
 from functools import wraps, partial
 import lightgbm as lgb
@@ -745,7 +746,7 @@ class FS:
                  weights=None,
                  total_pos_diff=True,
                  pos_diff=None,
-                 cv=StratifiedStratifiedKFold(5, True, 16777216),
+                 cv=5,
                  use_cache=True,
                  initial_cache=None,
                  dropped_from_selection=None,
@@ -771,20 +772,25 @@ class FS:
             for feature in features:
                 if feature not in self.__monotonic:
                     self.__monotonic[feature] = 0
+        else:
+            self.__monotonic = None
 
         self.__estimator = estimator
         self.__predict_method = predict_method
+
+        self.__use_early_stop = False
         if boosting_params is not None:
             self.__boosting_params = boosting_params
-            if estimator in ('lgb', 'lightgbm'):
-                self.__boosting_params['verbosity'] = -1
-            else:
-                self.__boosting_params['verbosity'] = 0
-            self.__use_early_stop = False
             for early_stop in ('early_stopping_round', 'early_stopping_rounds', 'early_stopping', 'n_iter_no_change'):
                 if early_stop in boosting_params:
                     if boosting_params[early_stop] > 0:
                         self.__use_early_stop = True
+        else:
+            self.__boosting_params = {}
+        if estimator in ('lgb', 'lightgbm'):
+            self.__boosting_params['verbosity'] = -1
+        else:
+            self.__boosting_params['verbosity'] = 0
 
         self.__metrics = metrics
         self.__increase_metric = increase_metrics
@@ -826,10 +832,17 @@ class FS:
 
         self.__e_add, self.__e_drop = {}, {}
 
-        self.__cv = cv
         self.__random_state = random_state
         np.random.seed(random_state)
         random.seed(random_state)
+        if isinstance(cv, int):
+            self.__cv = [i for i in StratifiedStratifiedKFold(cv, True, random_state).split(self.__data[features],
+                                                                                            self.__data[self.__target],
+                                                                                            self.__groups)]
+        elif not isinstance(cv, Iterable):
+            self.__cv = [i for i in cv.split(self.__data[features], self.__data[self.__target], self.__groups)]
+        else:
+            self.__cv = cv
 
         self.__log_columns = ['Selection type', 'Action', 'Features', 'Weighted diff', 'Worst diff', 'TOTAL']
         self.__c = 5
@@ -878,12 +891,11 @@ class FS:
         if len(features) == 0:
             return np.array([np.mean(self.__data[self.__target])] * self.__data.shape[0])
         if self.__estimator in ('lgb', 'lightgbm'):
-            self.__boosting_params['monotone_constraints'] = [self.__monotonic[feature] for feature in features]
+            if self.__monotonic is not None:
+                self.__boosting_params['monotone_constraints'] = [self.__monotonic[feature] for feature in features]
             self.__boosting_params['nthread'] = n_threads
             pred = np.zeros(self.__data.shape[0])
-            for itr, iva in self.__cv.split(self.__data[features],
-                                            self.__data[self.__target],
-                                            self.__groups):
+            for itr, iva in self.__cv:
                 xtr, ytr = self.__data.iloc[itr][features], self.__data.iloc[itr][self.__target]
                 trn_data = lgb.Dataset(xtr, ytr)
                 xva = self.__data.iloc[iva][features]
