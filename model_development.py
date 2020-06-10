@@ -1843,7 +1843,7 @@ def join_lgb_boosters(boosters):
 
 
 def pd_to_score(pd, intercept=0, coef=1):
-    return intercept + coef * np.log(pd / (1 - pd)) if 0 < pd < 1 else np.nan
+    return intercept + coef * np.log(pd / (1 - pd))
 
 
 def score_to_pd(score, intercept=0, coef=1):
@@ -1851,7 +1851,7 @@ def score_to_pd(score, intercept=0, coef=1):
 
 
 def pd_to_scaled_score(pd, intercept=0, coef=1):
-    return 200 + 20 * np.log2((1 + np.exp(-intercept) * ((1 - pd) / pd) ** coef) / 50) if 0 < pd <= 1 else np.nan
+    return 200 + 20 * np.log2((1 + np.exp(-intercept) * ((1 - pd) / pd) ** coef) / 50)
 
 
 def scaled_score_to_pd(scaled_score, intercept=0, coef=1):
