@@ -134,12 +134,15 @@ Log
 ```
 
 Состав директории *logs*:
+
 ![](pics/log_folders.png)
 
 Состав директории *logs/log_(дата_время)*:
+
 ![](pics/log_files.png)
 
 Текст файла *logs/log_(дата_время)/04_action4.txt*:
+
 ![](pics/log_text.png)
 
 Методы
