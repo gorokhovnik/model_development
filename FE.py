@@ -4,7 +4,7 @@ from model_development import *
 class FE:
     def __init__(self,
                  file,
-                 tables_schema,
+                 tables_schema='',
                  tables_prefix='bki_',
                  table_for_each_variable=True,
                  include_list=None):
