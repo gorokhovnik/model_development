@@ -1218,10 +1218,10 @@ join_lgb_boosters
 ...     model = lgb.train(params, trn, verbose_eval=False)
 ...     models += [model]
 >>> supermodel = join_lgb_boosters(models)
->>> np.mean([model.predict(data[features], raw_score=True) for model in models], axis=0)
+>>> np.mean([model.predict(df[features], raw_score=True) for model in models], axis=0)
 array([-3.61165333, -3.29126178, -3.88155776, ..., -4.35643877,
        -4.46554825, -3.60822026])
->>> supermodel.predict(data[features], raw_score=True)
+>>> supermodel.predict(df[features], raw_score=True)
 array([-3.61165333, -3.29126178, -3.88155776, ..., -4.35643877,
        -4.46554825, -3.60822026])
 ```
