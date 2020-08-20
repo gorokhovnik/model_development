@@ -133,13 +133,13 @@ class FE:
         else:
             varnumcomb = re.sub('\+', '.*', re.sub('[,;]', ',', re.sub(' +', '', var['num_comb']))).split(',')
             for num_comb in varnumcomb:
-                num_vars = grepl(num_comb, self.__var_vars[varnumname])
+                num_vars += grepl(num_comb, self.__var_vars[varnumname])
         if vardenname not in self.__var_names:
             den_vars = grepl(vardenname, self.__over_vars)
         else:
             vardencomb = re.sub('\+', '.*', re.sub('[,;]', ',', re.sub(' +', '', var['den_comb']))).split(',')
             for den_comb in vardencomb:
-                den_vars = grepl(den_comb, self.__var_vars[vardenname])
+                den_vars += grepl(den_comb, self.__var_vars[vardenname])
 
         def convert(k):
             return re.sub('%', '', re.sub('([^0-9]|^)([0-9])([^0-9]|$)', '\\1%0\\2\\3', re.sub('00', 'AA', k)))
