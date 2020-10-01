@@ -898,7 +898,7 @@ class FS:
         if self.__estimator in ('lgb', 'lightgbm'):
             if self.__monotonic is not None:
                 self.__boosting_params['monotone_constraints'] = [self.__monotonic[feature] for feature in features]
-            self.__boosting_params['nthread'] = n_threads
+            self.__boosting_params['num_threads'] = n_threads
             pred = np.zeros(self.__data.shape[0])
             for itr, iva in self.__cv:
                 xtr, ytr = self.__data.iloc[itr][features], self.__data.iloc[itr][self.__target]
