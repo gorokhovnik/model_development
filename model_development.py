@@ -332,7 +332,7 @@ class Summary:
             feat_summary['na_count'] = [_na_count_]
 
         if self.__mode_to_summary or self.__score_fillna_to_summary or self.__score_avg_fillna_to_summary:
-            _mode_ = mode(df_[feat])[0][0] if _na_count_ < n else np.nan
+            _mode_ = mode(df_[feat], nan_policy='omit')[0][0] if _na_count_ < n else np.nan
         if self.__mode_to_summary:
             feat_summary['mode'] = [_mode_]
         if self.__mode_freq_to_summary or self.__score_fillna_to_summary or self.__score_avg_fillna_to_summary or \
