@@ -513,7 +513,7 @@ Stability (на доработке)
 Конструктор класса
 
 ### features_fall_and_sign_change
-`features_fall_and_sign_change(self, target, stable_by, group_by=None, decrease_limit=3, fell_limit=0, changed_sign_limit=0, total_limit=np.inf, max_fell_limit=0, max_changed_sign_limit=0, max_total_limit=np.inf, n_threads=1)`
+`features_fall_and_sign_change(self, target, stable_by, group_by=None, metrics=gini_score, decrease_limit=3, fell_limit=0, changed_sign_limit=0, total_limit=np.inf, max_fell_limit=0, max_changed_sign_limit=0, max_total_limit=np.inf, n_threads=1)`
 
 Метод для выявления признаков с нестабильным во времени качеством
 
