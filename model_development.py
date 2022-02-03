@@ -200,6 +200,11 @@ class MemoryReducer:
         self.int16_max = np.iinfo(np.int16).max
         self.int32_min = np.iinfo(np.int32).min
         self.int32_max = np.iinfo(np.int32).max
+
+        self.uint8_max = np.iinfo(np.uint8).max
+        self.uint16_max = np.iinfo(np.uint16).max
+        self.uint32_max = np.iinfo(np.uint32).max
+
         self.float16_min = np.finfo(np.float16).min
         self.float16_max = np.finfo(np.float16).max
         self.float32_min = np.finfo(np.float32).min
@@ -210,6 +215,7 @@ class MemoryReducer:
     def shrink_column(self,
                       col):
         is_int = col.dtypes.name[:3] == 'int'
+        is_uint = col.dtypes.name[:3] == 'uin'
         is_float = col.dtypes.name[:3] == 'flo'
 
         if is_int:
@@ -220,6 +226,14 @@ class MemoryReducer:
             elif self.__int_min_type <= 16 and c_min > self.int16_min and c_max < self.int16_max:
                 col = col.astype(np.int16)
             elif self.__int_min_type <= 32 and c_min > self.int32_min and c_max < self.int32_max:
+                col = col.astype(np.int32)
+        elif is_uint:
+            c_max = col.max()
+            if self.__int_min_type <= 8 and c_max < self.uint8_max:
+                col = col.astype(np.int8)
+            elif self.__int_min_type <= 16 and c_max < self.uint16_max:
+                col = col.astype(np.int16)
+            elif self.__int_min_type <= 32 and c_max < self.uint32_max:
                 col = col.astype(np.int32)
         elif is_float:
             c_min = col.min()
