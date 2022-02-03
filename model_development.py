@@ -1799,7 +1799,7 @@ def join_lgb_boosters(boosters):
         parameters = '\n'.join(cur[cur.index('parameters:'):])
 
         feat_imp = {i[:i.index('=')]: int(i[i.index('=') + 1:])
-                    for i in cur[cur.index('feature importances:') + 1:cur.index('parameters:') - 1]}
+                    for i in cur[cur.index('feature_importances:') + 1:cur.index('parameters:') - 1]}
         for i in feat_imp:
             if i in feature_importances:
                 feature_importances[i] += feat_imp[i]
@@ -1843,7 +1843,7 @@ def join_lgb_boosters(boosters):
     meta = '\n'.join(meta)
     trees += 'end of trees\n'
 
-    feature_importances = 'feature importances:\n' + '\n'.join([i + '=' + str(feature_importances[i])
+    feature_importances = 'feature_importances:\n' + '\n'.join([i + '=' + str(feature_importances[i])
                                                                 for i in sorted(feature_importances,
                                                                                 key=feature_importances.get,
                                                                                 reverse=True)]) + '\n'
