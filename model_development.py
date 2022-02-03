@@ -1369,7 +1369,7 @@ class FS:
                           iterable=[self.__features[:n] for n in range(lower_bound, upper_bound)],
                           n_threads=n_threads)
         weighted = np.dot(scores, self.__weights)
-        n_selected = np.argmax(weighted) + lower_bound
+        n_selected = (np.argmax(weighted) if self.__increase_metric else np.argmin(weighted)) + lower_bound
 
         if self.__verbose > 1:
             for i in range(lower_bound, upper_bound):
