@@ -649,9 +649,9 @@ Name: importance, dtype: float64
 
 get_highly_correlated_features
 ==============================
-`get_highly_correlated_features(data, features, correlation_cutoff=0.95, fraction=1, return_correlation_matrix=False, random_state=16777216)`
+`get_highly_correlated_features(data, features, correlation_cutoff=0.95, fraction=1, corr_method='pearson', return_correlation_matrix=False, random_state=16777216)`
 
-Вычисляет [корреляцию Пирсона](https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D1%80%D1%80%D0%B5%D0%BB%D1%8F%D1%86%D0%B8%D1%8F#%D0%9B%D0%B8%D0%BD%D0%B5%D0%B9%D0%BD%D1%8B%D0%B9_%D0%BA%D0%BE%D1%8D%D1%84%D1%84%D0%B8%D1%86%D0%B8%D0%B5%D0%BD%D1%82_%D0%BA%D0%BE%D1%80%D1%80%D0%B5%D0%BB%D1%8F%D1%86%D0%B8%D0%B8) между всеми признаками и исключает сильнокоррелированные
+Вычисляет корреляцию (по умолчанию [Пирсона](https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D1%80%D1%80%D0%B5%D0%BB%D1%8F%D1%86%D0%B8%D1%8F#%D0%9B%D0%B8%D0%BD%D0%B5%D0%B9%D0%BD%D1%8B%D0%B9_%D0%BA%D0%BE%D1%8D%D1%84%D1%84%D0%B8%D1%86%D0%B8%D0%B5%D0%BD%D1%82_%D0%BA%D0%BE%D1%80%D1%80%D0%B5%D0%BB%D1%8F%D1%86%D0%B8%D0%B8)) между всеми признаками и исключает сильнокоррелированные
 
 Вычисляется на основе [pandas.DataFrame.corr](https://pandas.pydata.org/pandas-docs/version/0.25.0/reference/api/pandas.DataFrame.corr.html)
 
@@ -660,6 +660,7 @@ get_highly_correlated_features
 * __features__: list - список признаков, отсортированный от лучшего к худшему
 * __correlation_cutoff__: float, *default=0.95* - пороговое значение допустимой корреляции между признаками
 * __fraction__: float, *default=1* - доля выборки для вычисления корреляции в промежутке (0; 1] для ускорения вычисления корреляции
+* __corr_method__: {‘pearson’, ‘kendall’, ‘spearman’} or callable, *default='pearson'* - метод расчета корреляции, аналогичен [pandas.DataFrame.corr](https://pandas.pydata.org/pandas-docs/version/0.25.0/reference/api/pandas.DataFrame.corr.html)
 * __return_correlation_matrix__: bool, *default=False* - возвращать ли матрицу корреляций вместе с словарем сильнокоррелированных признаков
 * __random_state__: int, *default=16777216* - случайное состояние, испльзуется только при *fraction* < 1
 

@@ -736,9 +736,10 @@ def get_highly_correlated_features(data,
                                    features,
                                    correlation_cutoff=0.95,
                                    fraction=1,
+                                   corr_method='pearson',
                                    return_correlation_matrix=False,
                                    random_state=16777216):
-    correlation_matrix = data.sample(frac=fraction, random_state=random_state)[features].corr()
+    correlation_matrix = data.sample(frac=fraction, random_state=random_state)[features].corr(corr_method)
 
     correlated = {}
     for i in range(len(features)):
