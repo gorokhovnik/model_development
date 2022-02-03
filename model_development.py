@@ -501,10 +501,10 @@ class Stability:
         fell = np.sum(gini['fell'])
         changed_sign = np.sum(gini['changed_sign'])
 
-        if fell > self.__fell_limit:
-            return 1
         if changed_sign > self.__changed_sign_limit:
             return 2
+        if fell > self.__fell_limit:
+            return 1
         if fell + changed_sign > self.__total_limit:
             return 3
 
@@ -523,10 +523,10 @@ class Stability:
             max_changed_sign = np.max(gini['changed_sign'])
             max_total = np.max(gini['fell'] + gini['changed_sign'])
 
-            if max_fell > self.__max_fell_limit:
-                return 1
             if max_changed_sign > self.__max_changed_sign_limit:
                 return 2
+            if max_fell > self.__max_fell_limit:
+                return 1
             if max_total > self.__max_total_limit:
                 return 3
 
