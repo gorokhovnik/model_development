@@ -491,15 +491,15 @@ class Stability:
     def _feature_fall_and_sign_change(self,
                                       df):
         feature = df.columns[0]
-        gini = pd.DataFrame(df.groupby(self.__stable_by).apply(
-            lambda group: pd.Series({'gini': self.__metrics(group[self.__target], group[feature])})))
-        gini.dropna(inplace=True)
+        score = pd.DataFrame(df.groupby(self.__stable_by).apply(
+            lambda group: pd.Series({'score': self.__metrics(group[self.__target], group[feature])})))
+        score.dropna(inplace=True)
 
-        gini['base_gini'] = self.__metrics(df[self.__target], df[feature])
-        gini['fell'] = (gini['base_gini'] / gini['gini'] > self.__decrease_limit) * 1
-        gini['changed_sign'] = (gini['gini'] * gini['base_gini'] < 0) * 1
-        fell = np.sum(gini['fell'])
-        changed_sign = np.sum(gini['changed_sign'])
+        score['base_score'] = self.__metrics(df[self.__target], df[feature])
+        score['fell'] = (score['base_score'] / score['score'] > self.__decrease_limit) * 1
+        score['changed_sign'] = (score['score'] * score['base_score'] < 0) * 1
+        fell = np.sum(score['fell'])
+        changed_sign = np.sum(score['changed_sign'])
 
         if changed_sign > self.__changed_sign_limit:
             return 2
@@ -509,19 +509,19 @@ class Stability:
             return 3
 
         if len(self.__group_by) > 0:
-            base_gini = pd.DataFrame(df.groupby(self.__group_by).apply(
-                lambda group: pd.Series({'base_gini': self.__metrics(group[self.__target], group[feature])})))
-            gini = pd.DataFrame(df.groupby(self.__stable_by + self.__group_by).apply(
-                lambda group: pd.Series({'gini': self.__metrics(group[self.__target], group[feature])})))
-            gini.dropna(inplace=True)
+            base_score = pd.DataFrame(df.groupby(self.__group_by).apply(
+                lambda group: pd.Series({'base_score': self.__metrics(group[self.__target], group[feature])})))
+            score = pd.DataFrame(df.groupby(self.__stable_by + self.__group_by).apply(
+                lambda group: pd.Series({'score': self.__metrics(group[self.__target], group[feature])})))
+            score.dropna(inplace=True)
 
-            gini = gini.reset_index().merge(right=base_gini.reset_index(), how='left', on=self.__group_by)
-            gini['fell'] = (gini['base_gini'] / gini['gini'] > self.__decrease_limit) * 1
-            gini['changed_sign'] = (gini['gini'] * gini['base_gini'] < 0) * 1
-            gini = gini[self.__group_by + ['fell', 'changed_sign']].groupby(self.__group_by).sum()
-            max_fell = np.max(gini['fell'])
-            max_changed_sign = np.max(gini['changed_sign'])
-            max_total = np.max(gini['fell'] + gini['changed_sign'])
+            score = score.reset_index().merge(right=base_score.reset_index(), how='left', on=self.__group_by)
+            score['fell'] = (score['base_score'] / score['score'] > self.__decrease_limit) * 1
+            score['changed_sign'] = (score['score'] * score['base_score'] < 0) * 1
+            score = score[self.__group_by + ['fell', 'changed_sign']].groupby(self.__group_by).sum()
+            max_fell = np.max(score['fell'])
+            max_changed_sign = np.max(score['changed_sign'])
+            max_total = np.max(score['fell'] + score['changed_sign'])
 
             if max_changed_sign > self.__max_changed_sign_limit:
                 return 2
