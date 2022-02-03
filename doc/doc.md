@@ -300,7 +300,7 @@ dtype: object
 
 Summary
 =======
-`class Summary(feature_description_function=None, nunique_to_summary=True, na_count_to_summary=True, mode_to_summary=True, mode_freq_to_summary=True, min_to_summary=True, max_to_summary=True, mean_to_summary=True, median_to_summary=True, percentiles=None, score_to_summary=True, score_fillna_to_summary=True, metrics=gini_score, score_avg_to_summary=True, score_avg_fillna_to_summary=True, avg_metrics=gini_avg_score)`
+`class Summary(feature_description_function=None, nunique_to_summary=True, na_count_to_summary=True, mode_to_summary=True, mode_freq_to_summary=True, min_to_summary=True, max_to_summary=True, mean_to_summary=True, median_to_summary=True, percentiles=None, score_to_summary=True, score_fillna_to_summary=True, metrics=gini_score, score_avg_to_summary=True, score_avg_fillna_to_summary=True, avg_metrics=gini_avg_score, filler_to_summary=True, filler_avg_to_summary=True)`
 
 Класс для формирования таблицы описания признаков
 
@@ -321,6 +321,8 @@ Summary
 * __score_avg_to_summary__: bool, *default=True* - включать ли в таблицу средний одиночный скор по группам
 * __score_avg_fillna_to_summary__: bool, *default=True* - включать ли в таблицу средние одиночные скоры по группам с различными способами заполнения пустых значений
 * __avg_metrics__: callable, *default=gini_avg_score* - метрика для вычисления средних одиночных скоров по группам
+* __filler_to_summary__: bool, *default=True* - включать ли в таблицу оптимальный заполнитель для одиночного скора
+* __filler_avg_to_summary__: bool, *default=True* - включать ли в таблицу оптимальный заполнитель для среднего одиночного скора по группам
 
 ##### Примеры:
 ```python
@@ -346,11 +348,11 @@ a               0.75        0.7500        0.7500          0.750
 b               1.00        0.5625        0.5625          0.625   
 c               1.00        1.0000        0.0000          1.000   
 
-         score_na_mean  score_na_median   score  score_avg_wo_na  \
-feature                                                            
-a               0.7500           0.7500  0.7500         0.666667   
-b               0.9375           0.9375  0.9375         0.333333   
-c               0.7500           0.7500  1.0000         0.666667   
+         score_na_mean  score_na_median   score filler  score_avg_wo_na  \
+feature                                                                   
+a               0.7500           0.7500  0.7500     na         0.666667   
+b               0.9375           0.9375  0.9375   mean         0.333333   
+c               0.7500           0.7500  1.0000    min         0.666667   
 
          score_avg_na_min  score_avg_na_max  score_avg_na_mode  \
 feature                                                          
@@ -358,11 +360,11 @@ a                0.666667          0.666667           0.666667
 b                0.333333          0.333333           0.333333   
 c                1.000000          0.000000           1.000000   
 
-         score_avg_na_mean  score_avg_na_median  score_avg  
-feature                                                     
-a                 0.666667             0.666667   0.666667  
-b                 1.000000             1.000000   1.000000  
-c                 0.666667             0.666667   1.000000
+         score_avg_na_mean  score_avg_na_median  score_avg filler_avg  
+feature                                                                
+a                 0.666667             0.666667   0.666667         na  
+b                 1.000000             1.000000   1.000000       mean  
+c                 0.666667             0.666667   1.000000        min  
 ```
 ```python
 >>> df = pd.DataFrame({'a': [0.05, 0.1, 0.06, 0.07, 0.08, 0.09, 0.11, 0.11],
@@ -387,11 +389,11 @@ a               0.75        0.7500        0.7500          0.750
 b               1.00        0.5625        0.5625          0.625   
 c               1.00        1.0000        0.0000          1.000   
 
-         score_na_mean  score_na_median   score  
-feature                                          
-a               0.7500           0.7500  0.7500  
-b               0.9375           0.9375  0.9375  
-c               0.7500           0.7500  1.0000  
+         score_na_mean  score_na_median   score filler  
+feature                                                 
+a               0.7500           0.7500  0.7500     na  
+b               0.9375           0.9375  0.9375   mean  
+c               0.7500           0.7500  1.0000    min
 ```
 ```python
 >>> def foo(name):
@@ -401,15 +403,15 @@ c               0.7500           0.7500  1.0000
 ...                    'c': [0.05, np.nan, np.nan, 0.07, 0.08, 0.09, 0.11, 0.12],
 ...                    't': [0, 0, 0, 0, 1, 1, 1, 1],
 ...                    'g': [1, 2, 1, 3, 1, 2, 3, 2]})
->>> s = Summary(foo, False, False, False, False, False, False, False, False, None, True, False, gini_score, True, False)
+>>> s = Summary(foo, False, False, False, False, False, False, False, False, None, True, False, gini_score, True, False, False, False)
 >>> s.features_summary(df=df,
 ...                    features_list=['a', 'b', 'c'],
 ...                    target_name='t')
-        description  score  score_avg
-feature                              
-a                aa   0.75   0.666667
-b                bb   1.00   0.333333
-c                cc   1.00   0.666667
+        description  score
+feature                   
+a                aa   0.75
+b                bb   1.00
+c                cc   1.00
 ```
 
 ##### Заметки:

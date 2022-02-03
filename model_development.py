@@ -282,7 +282,9 @@ class Summary:
                  metrics=gini_score,
                  score_avg_to_summary=True,
                  score_avg_fillna_to_summary=True,
-                 avg_metrics=gini_avg_score):
+                 avg_metrics=gini_avg_score,
+                 filler_to_summary=True,
+                 filler_avg_to_summary=True):
         self.__feature_description_function = feature_description_function
         self.__nunique_to_summary = nunique_to_summary
         self.__na_count_to_summary = na_count_to_summary
@@ -299,6 +301,8 @@ class Summary:
         self.__score_avg_to_summary = score_avg_to_summary
         self.__score_avg_fillna_to_summary = score_avg_fillna_to_summary
         self.__avg_metrics = avg_metrics
+        self.__filler_to_summary = filler_to_summary and score_fillna_to_summary
+        self.__filler_avg_to_summary = filler_avg_to_summary and score_avg_fillna_to_summary
 
     def feature_summary(self,
                         df_):
@@ -377,18 +381,23 @@ class Summary:
                     feat_summary['score_na_min'] = [self.__metrics(dfmin[targ], dfmin[feat])]
                     if abs(best_score) < abs(feat_summary['score_na_min'][0]):
                         best_score = feat_summary['score_na_min'][0]
+                        filler = 'min'
                     feat_summary['score_na_max'] = [self.__metrics(dfmax[targ], dfmax[feat])]
                     if abs(best_score) < abs(feat_summary['score_na_max'][0]):
                         best_score = feat_summary['score_na_max'][0]
+                        filler = 'max'
                     feat_summary['score_na_mode'] = [self.__metrics(dfmode[targ], dfmode[feat])]
                     if abs(best_score) < abs(feat_summary['score_na_mode'][0]):
                         best_score = feat_summary['score_na_mode'][0]
+                        filler = 'mode'
                     feat_summary['score_na_mean'] = [self.__metrics(dfmean[targ], dfmean[feat])]
                     if abs(best_score) < abs(feat_summary['score_na_mean'][0]):
                         best_score = feat_summary['score_na_mean'][0]
+                        filler = 'mean'
                     feat_summary['score_na_median'] = [self.__metrics(dfmedian[targ], dfmedian[feat])]
                     if abs(best_score) < abs(feat_summary['score_na_median'][0]):
                         best_score = feat_summary['score_na_median'][0]
+                        filler = 'median'
                 else:
                     best_score = feat_summary['score_wo_na'][0]
                     feat_summary['score_na_min'] = best_score
@@ -396,6 +405,7 @@ class Summary:
                     feat_summary['score_na_mode'] = best_score
                     feat_summary['score_na_mean'] = best_score
                     feat_summary['score_na_median'] = best_score
+                    filler = 'na'
             else:
                 feat_summary['score_wo_na'] = [0]
                 feat_summary['score_na_min'] = [0]
@@ -404,10 +414,13 @@ class Summary:
                 feat_summary['score_na_mean'] = [0]
                 feat_summary['score_na_median'] = [0]
                 best_score = 0
+                filler = 'na'
 
         if self.__score_to_summary:
             if self.__score_fillna_to_summary:
                 feat_summary['score'] = [best_score]
+                if self.__filler_to_summary:
+                    feat_summary['filler'] = [filler]
             elif _mode_freq_ != 1 and df_[targ].max() != df_[targ].min():
                 feat_summary['score'] = [self.__metrics(df_[targ], df_[feat])]
             else:
@@ -422,22 +435,27 @@ class Summary:
                         self.__avg_metrics(dfmin[targ], dfmin[feat], y_group=dfmin[grby])]
                     if abs(best_score_avg) < abs(feat_summary['score_avg_na_min'][0]):
                         best_score_avg = feat_summary['score_avg_na_min'][0]
+                        filler_avg = 'min'
                     feat_summary['score_avg_na_max'] = [
                         self.__avg_metrics(dfmax[targ], dfmax[feat], y_group=dfmax[grby])]
                     if abs(best_score_avg) < abs(feat_summary['score_avg_na_max'][0]):
                         best_score_avg = feat_summary['score_avg_na_max'][0]
+                        filler_avg = 'max'
                     feat_summary['score_avg_na_mode'] = [
                         self.__avg_metrics(dfmode[targ], dfmode[feat], y_group=dfmode[grby])]
                     if abs(best_score_avg) < abs(feat_summary['score_avg_na_mode'][0]):
                         best_score_avg = feat_summary['score_avg_na_mode'][0]
+                        filler_avg = 'mode'
                     feat_summary['score_avg_na_mean'] = [
                         self.__avg_metrics(dfmean[targ], dfmean[feat], y_group=dfmean[grby])]
                     if abs(best_score_avg) < abs(feat_summary['score_avg_na_mean'][0]):
                         best_score_avg = feat_summary['score_avg_na_mean'][0]
+                        filler_avg = 'mean'
                     feat_summary['score_avg_na_median'] = [
                         self.__avg_metrics(dfmedian[targ], dfmedian[feat], y_group=dfmedian[grby])]
                     if abs(best_score_avg) < abs(feat_summary['score_avg_na_median'][0]):
                         best_score_avg = feat_summary['score_avg_na_median'][0]
+                        filler_avg = 'median'
                 else:
                     best_score_avg = feat_summary['score_avg_wo_na'][0]
                     feat_summary['score_avg_na_min'] = best_score_avg
@@ -445,6 +463,7 @@ class Summary:
                     feat_summary['score_avg_na_mode'] = best_score_avg
                     feat_summary['score_avg_na_mean'] = best_score_avg
                     feat_summary['score_avg_na_median'] = best_score_avg
+                    filler_avg = 'na'
             else:
                 feat_summary['score_avg_wo_na'] = [0]
                 feat_summary['score_avg_na_min'] = [0]
@@ -453,10 +472,13 @@ class Summary:
                 feat_summary['score_avg_na_mean'] = [0]
                 feat_summary['score_avg_na_median'] = [0]
                 best_score_avg = 0
+                filler_avg = 'na'
 
         if self.__score_avg_to_summary:
             if self.__score_avg_fillna_to_summary:
                 feat_summary['score_avg'] = [best_score_avg]
+                if self.__filler_to_summary:
+                    feat_summary['filler_avg'] = [filler_avg]
             elif _mode_freq_ != 1 and df_[targ].max() != df_[targ].min():
                 feat_summary['score_avg'] = [self.__avg_metrics(df_[targ], df_[feat], y_group=df_[grby])]
             else:
