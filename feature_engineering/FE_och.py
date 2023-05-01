@@ -1,13 +1,26 @@
-from model_development import *
+from typing import Optional, Callable, List, Dict, Tuple
+
+from itertools import product
+from functools import partial
+
+import os
+import re
+
+import numpy as np
+import pandas as pd
+
+from model_development_tools.utils import pool_map, grepl, unpack_dict
 
 
 class FE:
-    def __init__(self,
-                 file,
-                 tables_schema='',
-                 tables_prefix='bki_',
-                 table_for_each_variable=True,
-                 include_list=None):
+    def __init__(
+            self,
+            file: str,
+            tables_schema: str = '',
+            tables_prefix: str = 'bki_',
+            table_for_each_variable: bool = True,
+            include_list: Optional[List[str]] = None,
+    ) -> None:
         self.__global_flt_table = pd.read_excel(file, 'global_flt').query('include == 1').fillna('')
         self.__flt_table = pd.read_excel(file, 'flt').query('include == 1').fillna('')
         self.__vars_table = pd.read_excel(file, 'vars').query('include == 1').fillna('')
@@ -53,10 +66,16 @@ class FE:
         self.__query = {p: {} for p in self.__processes}
         self.__suf = '#suffix#'
 
-    def __ratio_name(self, name):
+    def __ratio_name(
+            self,
+            name: str,
+    ) -> str:
         return name if name in self.__var_names else 'Overview'
 
-    def __form_flt_vector(self, comb):
+    def __form_flt_vector(
+            self,
+            comb: str,
+    ) -> Tuple[List[str], List[str]]:
         combinations = re.sub('\+', '|', re.sub('[,;]', ',', re.sub(' +', '', comb))).split(',')
         combination_list = []
         code_dict = {}
@@ -78,7 +97,10 @@ class FE:
             code += [' AND '.join([code_dict[flt] for flt in filters])]
         return suffix, code
 
-    def __form_vars(self, var):
+    def __form_vars(
+            self,
+            var: Dict[str, str],
+    ) -> str:
         varsuffix, varcode = self.__form_flt_vector(var['comb'])
         vartype = var['type']
         varfuns = var['funs']
@@ -111,7 +133,9 @@ class FE:
                     query += [funs + ' AS ' + loan_var]
         return ',\n'.join(query)
 
-    def __form_overview_vars(self):
+    def __form_overview_vars(
+            self,
+    ) -> str:
         funs = self.__overview_vars_table['funs'].tolist()
         name = self.__overview_vars_table['name'].tolist()
         query = []
@@ -121,7 +145,10 @@ class FE:
                 query += [f + ' AS ' + n]
         return ',\n'.join(query)
 
-    def __form_ratio_vars(self, var):
+    def __form_ratio_vars(
+            self,
+            var: Dict[str, str],
+    ) -> str:
         query = []
         varnumname = var['num_name']
         vardenname = var['den_name']
@@ -157,44 +184,46 @@ class FE:
 
         return ',\n'.join(query)
 
-    def __form_global_flt(self, comb):
+    def __form_global_flt(
+            self,
+            comb: str,
+    ) -> str:
         combination = re.sub('\+', '|', re.sub(' +', '', comb))
         filter_comb = self.__global_flt_table[self.__global_flt_table['filter_id'].str.contains(combination)]['code']
         return ' AND '.join(filter_comb.to_list())
 
-    def __make_query(self,
-                     select_txt,
-                     into_txt,
-                     from_txt,
-                     where_txt=None,
-                     groupby_txt=None,
-                     drop=False):
-        query = ''
-        if drop:
-            query += 'DROP TABLE ' + into_txt + '\n'
-        query += 'SELECT TOP 0 ' + select_txt + '\n'
-        query += 'INTO ' + into_txt + '\n'
-        query += 'FROM ' + from_txt + '\n'
-        if groupby_txt is not None:
-            query += 'GROUP BY ' + groupby_txt + '\n'
-
-        query += '\n\n\n'
-
-        query += 'INSERT INTO ' + into_txt + '\n'
-        query += 'SELECT ' + select_txt + '\n'
-        query += 'FROM ' + from_txt
-        if where_txt is not None:
-            query += '\n' + 'WHERE ' + where_txt
-        if groupby_txt is not None:
-            query += '\n' + 'GROUP BY ' + groupby_txt
+    def __make_query(
+            self,
+            select_txt: str,
+            into_txt: str,
+            from_txt: str,
+            where_txt: Optional[str] = None,
+            groupby_txt: Optional[str] = None,
+            drop: bool = False,
+    ) -> str:
+        query = f'''{f'DROP TABLE {into_txt}' if drop else ''}
+        SELECT TOP 0 {select_txt}
+        INTO {into_txt}
+        FROM {from_txt}
+        {f'GROUP BY {groupby_txt}' if groupby_txt is not None else ''}
+        
+        
+        
+        INSERT INTO {into_txt}
+        SELECT {select_txt}
+        FROM {from_txt}
+        {f'WHERE {where_txt}' if where_txt is not None else ''}
+        {f'GROUP BY {groupby_txt}' if groupby_txt is not None else ''}
+        '''
 
         if self.__use_compression:
-            query += '\n' + 'ALTER TABLE ' + into_txt + '\n'
-            query += 'REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE)'
+            query += f'ALTER TABLE {into_txt} REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE)'
 
         return query
 
-    def __form_loans_and_payments_script(self):
+    def __form_loans_and_payments_script(
+            self,
+    ) -> Dict[str, str]:
         var_queries = []
         for idx, var in self.__vars_table[self.__vars_table['type'] == 'Платежи'].iterrows():
             var_queries += [self.__form_vars(var.to_dict())]
@@ -203,155 +232,179 @@ class FE:
         into_txt = '#payments'
         from_txt = self.__pay_info['schema.table'] + self.__suf
         groupby_txt = self.__pay_info['group_by']
-        query = self.__make_query(select_txt=select_txt,
-                                  into_txt=into_txt,
-                                  from_txt=from_txt,
-                                  groupby_txt=groupby_txt,
-                                  drop=True) + '\n\n\n\n'
+        query = self.__make_query(
+            select_txt=select_txt,
+            into_txt=into_txt,
+            from_txt=from_txt,
+            groupby_txt=groupby_txt,
+            drop=True
+        ) + '\n\n\n\n'
 
         select_txt = 'loans.*,\n' + ',\n'.join(unpack_dict(self.__pay_vars))
-        into_txt = self.__schema_prefix + 'loans_and_payments' + self.__suf
-        from_txt = self.__loans_info['schema.table'] + self.__suf + ' AS loans\n'
+        into_txt = f'{self.__schema_prefix}loans_and_payments{self.__suf}'
+        from_txt = f'{self.__loans_info["schema.table"]}{self.__suf} AS loans\n'
         from_txt += 'LEFT JOIN #payments AS payments\n'
-        from_txt += 'ON loans.' + self.__loans_info['id'] + ' = payments.' + self.__pay_info['group_by']
+        from_txt += f'ON loans.{self.__loans_info["id"]} = payments.{self.__pay_info["group_by"]}'
         where_txt = re.sub(self.__pay_info['group_by'], 'loans.' + self.__pay_info['group_by'],
                            self.__form_global_flt(self.__loans_info['comb']))
 
-        query += self.__make_query(select_txt=select_txt,
-                                   into_txt=into_txt,
-                                   from_txt=from_txt,
-                                   where_txt=where_txt,
-                                   drop=self.__drop_table_before_creating)
+        query += self.__make_query(
+            select_txt=select_txt,
+            into_txt=into_txt,
+            from_txt=from_txt,
+            where_txt=where_txt,
+            drop=self.__drop_table_before_creating
+        )
 
         return {'loans_and_payments': query}
 
-    def __form_vars_script(self):
+    def __form_vars_script(
+            self,
+    ) -> Dict[str, str]:
         query_dict = {}
         if self.__table_for_each_variable:
             for idx, var in self.__vars_table[self.__vars_table['type'] != 'Платежи'].iterrows():
                 select_txt = self.__loans_info['group_by'] + ',\n' + self.__form_vars(var.to_dict())
                 into_txt = self.__schema_prefix + var['name'] + self.__suf
-                from_txt = self.__schema_prefix + 'loans_and_payments' + self.__suf
+                from_txt = f'{self.__schema_prefix}loans_and_payments{self.__suf}'
                 groupby_txt = self.__loans_info['group_by']
 
-                query = self.__make_query(select_txt=select_txt,
-                                          into_txt=into_txt,
-                                          from_txt=from_txt,
-                                          groupby_txt=groupby_txt,
-                                          drop=self.__drop_table_before_creating)
+                query = self.__make_query(
+                    select_txt=select_txt,
+                    into_txt=into_txt,
+                    from_txt=from_txt,
+                    groupby_txt=groupby_txt,
+                    drop=self.__drop_table_before_creating
+                )
 
                 if var['type'] == 'Кредиты':
-                    query_dict['loans_agg|' + var['name']] = query
+                    query_dict[f'loans_agg|{var["name"]}'] = query
                 elif var['type'] == 'Платежи по кредитам':
-                    query_dict['payments_agg|' + var['name']] = query
+                    query_dict[f'payments_agg|{var["name"]}'] = query
         else:
             var_queries = []
             for idx, var in self.__vars_table[self.__vars_table['type'] == 'Кредиты'].iterrows():
                 var_queries += [self.__form_vars(var.to_dict())]
 
             select_txt = self.__loans_info['group_by'] + ',\n' + ',\n'.join(var_queries)
-            into_txt = self.__schema_prefix + 'loans_agg' + self.__suf
-            from_txt = self.__schema_prefix + 'loans_and_payments' + self.__suf
+            into_txt = f'{self.__schema_prefix}loans_agg{self.__suf}'
+            from_txt = f'{self.__schema_prefix}loans_and_payments{self.__suf}'
             groupby_txt = self.__loans_info['group_by']
 
-            query_dict['loans_agg'] = self.__make_query(select_txt=select_txt,
-                                                        into_txt=into_txt,
-                                                        from_txt=from_txt,
-                                                        groupby_txt=groupby_txt,
-                                                        drop=self.__drop_table_before_creating)
+            query_dict['loans_agg'] = self.__make_query(
+                select_txt=select_txt,
+                into_txt=into_txt,
+                from_txt=from_txt,
+                groupby_txt=groupby_txt,
+                drop=self.__drop_table_before_creating
+            )
 
             var_queries = []
             for idx, var in self.__vars_table[self.__vars_table['type'] == 'Платежи по кредитам'].iterrows():
                 var_queries += [self.__form_vars(var.to_dict())]
 
             select_txt = self.__loans_info['group_by'] + ',\n' + ',\n'.join(var_queries)
-            into_txt = self.__schema_prefix + 'payments_agg' + self.__suf
+            into_txt = f'{self.__schema_prefix}payments_agg{self.__suf}'
 
-            query_dict['payments_agg'] = self.__make_query(select_txt=select_txt,
-                                                           into_txt=into_txt,
-                                                           from_txt=from_txt,
-                                                           groupby_txt=groupby_txt,
-                                                           drop=self.__drop_table_before_creating)
+            query_dict['payments_agg'] = self.__make_query(
+                select_txt=select_txt,
+                into_txt=into_txt,
+                from_txt=from_txt,
+                groupby_txt=groupby_txt,
+                drop=self.__drop_table_before_creating
+            )
 
         return query_dict
 
-    def __form_overview_vars_script(self):
+    def __form_overview_vars_script(
+            self,
+    ) -> Dict[str, str]:
         var_query = self.__form_overview_vars()
 
-        select_txt = 'appl.' + self.__appl_info['id'] + ',\n' + var_query
-        into_txt = self.__schema_prefix + 'overview' + self.__suf
-        from_txt = self.__appl_info['schema.table'] + self.__suf + ' AS appl\n'
-        from_txt += 'LEFT JOIN ' + self.__over_info['schema.table'] + self.__suf + ' AS ove\n'
-        from_txt += 'ON appl.' + self.__appl_info['id'] + ' = ove.' + self.__over_info['id']
+        select_txt = f'appl.{self.__appl_info["id"]},\n{var_query}'
+        into_txt = f'{self.__schema_prefix}overview{self.__suf}'
+        from_txt = f'{self.__appl_info["schema.table"]}{self.__suf} AS appl\n'
+        from_txt += f'LEFT JOIN {self.__over_info["schema.table"]}{self.__suf} AS ove\n'
+        from_txt += f'ON appl.{self.__appl_info["id"]} = ove.{self.__over_info["id"]}'
         where_txt = re.sub(self.__appl_info['id'], 'appl.' + self.__appl_info['id'],
                            self.__form_global_flt(self.__appl_info['comb']))
         where_txt += ' AND ' + re.sub(self.__over_info['id'], 'appl.' + self.__over_info['id'],
                                       self.__form_global_flt(self.__over_info['comb']))
 
-        query = self.__make_query(select_txt=select_txt,
-                                  into_txt=into_txt,
-                                  from_txt=from_txt,
-                                  where_txt=where_txt,
-                                  drop=self.__drop_table_before_creating)
+        query = self.__make_query(
+            select_txt=select_txt,
+            into_txt=into_txt,
+            from_txt=from_txt,
+            where_txt=where_txt,
+            drop=self.__drop_table_before_creating
+        )
 
         return {'overview': query}
 
-    def __form_ratio_vars_script(self):
+    def __form_ratio_vars_script(
+            self,
+    ) -> Dict[str, str]:
         query_dict = {}
         var_queries = {var: [] for var in self.__ratio_names}
         for idx, var in self.__ratio_vars_table.iterrows():
-            name = self.__ratio_name(var['num_name']) + '_TO_' + self.__ratio_name(var['den_name']) + '_RATIO'
+            name = f'{self.__ratio_name(var["num_name"])}_TO_{self.__ratio_name(var["den_name"])}_RATIO'
             var_queries[name] += [self.__form_ratio_vars(var.to_dict())]
         if self.__table_for_each_variable:
             for name in self.__ratio_names:
                 numname, denname = name[:-6].split('_TO_')
                 if numname == denname and numname == 'Overview':
                     select_txt = self.__appl_info['id'] + ',\n' + ',\n'.join(var_queries[name])
-                    from_txt = self.__schema_prefix + 'overview' + self.__suf
+                    from_txt = f'{self.__schema_prefix}overview{self.__suf}'
                 elif numname == denname and numname != 'Overview':
                     select_txt = self.__loans_info['group_by'] + ',\n' + ',\n'.join(var_queries[name])
                     from_txt = self.__schema_prefix + numname + self.__suf
                 elif numname == 'Overview':
                     select_txt = 'ove.' + self.__appl_info['id'] + ',\n' + ',\n'.join(var_queries[name])
-                    from_txt = self.__schema_prefix + 'overview' + self.__suf + ' AS ove\n'
-                    from_txt += 'LEFT JOIN ' + self.__schema_prefix + denname + self.__suf + ' AS ' + denname + '\n'
+                    from_txt = f'{self.__schema_prefix}overview{self.__suf} AS ove\n'
+                    from_txt += f'LEFT JOIN {self.__schema_prefix}denname{self.__suf} AS {denname}\n'
                     from_txt += 'ON ove.' + self.__appl_info['id']
-                    from_txt += ' = ' + denname + '.' + self.__loans_info['group_by']
+                    from_txt += f' = {denname}.' + self.__loans_info['group_by']
                 elif denname == 'Overview':
                     select_txt = 'ove.' + self.__appl_info['id'] + ',\n' + ',\n'.join(var_queries[name])
-                    from_txt = self.__schema_prefix + 'overview' + self.__suf + ' AS ove\n'
-                    from_txt += 'LEFT JOIN ' + self.__schema_prefix + numname + self.__suf + ' AS ' + numname + '\n'
+                    from_txt = f'{self.__schema_prefix}overview{self.__suf} AS ove\n'
+                    from_txt += f'LEFT JOIN {self.__schema_prefix}{numname}{self.__suf} AS {numname}\n'
                     from_txt += 'ON ove.' + self.__appl_info['id']
-                    from_txt += ' = ' + numname + '.' + self.__loans_info['group_by']
+                    from_txt += f' = {numname}.' + self.__loans_info['group_by']
                 else:
                     select_txt = numname + '.' + self.__loans_info['group_by'] + ',\n' + ',\n'.join(var_queries[name])
-                    from_txt = self.__schema_prefix + numname + self.__suf + ' AS ' + numname + '\n'
-                    from_txt += 'LEFT JOIN ' + self.__schema_prefix + denname + self.__suf + ' AS ' + denname + '\n'
-                    from_txt += 'ON ' + numname + '.' + self.__loans_info['group_by']
-                    from_txt += ' = ' + denname + '.' + self.__loans_info['group_by']
+                    from_txt = f'{self.__schema_prefix}{numname}{self.__suf} AS {numname}\n'
+                    from_txt += f'LEFT JOIN {self.__schema_prefix}{denname}{self.__suf} AS {denname}\n'
+                    from_txt += f'ON {numname}.' + self.__loans_info['group_by']
+                    from_txt += f' = {denname}.' + self.__loans_info['group_by']
                 into_txt = self.__schema_prefix + name + self.__suf
 
-                query_dict['ratio|' + name] = self.__make_query(select_txt=select_txt,
-                                                                into_txt=into_txt,
-                                                                from_txt=from_txt,
-                                                                drop=self.__drop_table_before_creating)
+                query_dict['ratio|' + name] = self.__make_query(
+                    select_txt=select_txt,
+                    into_txt=into_txt,
+                    from_txt=from_txt,
+                    drop=self.__drop_table_before_creating
+                )
         else:
             select_txt = 'ove.' + self.__appl_info['id'] + ',\n' + ',\n'.join(unpack_dict(var_queries))
-            into_txt = self.__schema_prefix + 'ratio' + self.__suf
-            from_txt = self.__schema_prefix + 'overview' + self.__suf + ' AS ove' + '\n'
-            from_txt += 'LEFT JOIN ' + self.__schema_prefix + 'loans_agg' + self.__suf + ' AS loans' + '\n'
+            into_txt = f'{self.__schema_prefix}ratio{self.__suf}'
+            from_txt = f'{self.__schema_prefix}overview{self.__suf} AS ove\n'
+            from_txt += f'LEFT JOIN {self.__schema_prefix}loans_agg{self.__suf} AS loans\n'
             from_txt += 'ON ove.' + self.__appl_info['id'] + ' = loans.' + self.__loans_info['group_by'] + '\n'
             from_txt += 'LEFT JOIN ' + self.__schema_prefix + 'payments_agg' + self.__suf + ' AS pay' + '\n'
             from_txt += 'ON ove.' + self.__appl_info['id'] + ' = pay.' + self.__loans_info['group_by']
 
-            query_dict['ratio'] = self.__make_query(select_txt=select_txt,
-                                                    into_txt=into_txt,
-                                                    from_txt=from_txt,
-                                                    drop=self.__drop_table_before_creating)
+            query_dict['ratio'] = self.__make_query(
+                select_txt=select_txt,
+                into_txt=into_txt,
+                from_txt=from_txt,
+                drop=self.__drop_table_before_creating
+            )
 
         return query_dict
 
-    def __form_scripts(self):
+    def __form_scripts(
+            self,
+    ) -> None:
         self.__pay_vars = {var: [] for var in self.__pay_names}
         self.__pay_loan_vars = {var: [] for var in self.__pay_loan_names}
         self.__loan_vars = {var: [] for var in self.__loan_names}
@@ -368,11 +421,13 @@ class FE:
         for p in self.__processes:
             self.__query[p].update({q: re.sub(self.__suf, self.__processes[p], query[q]) for q in query})
 
-    def create_scripts(self,
-                       output_dir='FE_scripts',
-                       split_scripts=False,
-                       drop_table_before_creating=True,
-                       use_compression=True):
+    def create_scripts(
+            self,
+            output_dir: str = 'FE_scripts',
+            split_scripts: bool = False,
+            drop_table_before_creating: bool = True,
+            use_compression: bool = True,
+    ) -> None:
         if not self.__table_for_each_variable and split_scripts:
             split_scripts = False
         self.__drop_table_before_creating = drop_table_before_creating
@@ -382,75 +437,77 @@ class FE:
             os.mkdir(output_dir)
         for p in self.__processes:
             if p not in os.listdir(output_dir):
-                os.mkdir(output_dir + '/' + p)
+                os.mkdir(f'{output_dir}/{p}')
             if split_scripts is None:
                 txt = [self.__query[p]['loans_and_payments']]
                 if self.__table_for_each_variable:
                     for name in self.__pay_loan_names:
-                        txt += [self.__query[p]['payments_agg|' + name]]
+                        txt += [self.__query[p][f'payments_agg|{name}']]
                     for name in self.__loan_names:
-                        txt += [self.__query[p]['loans_agg|' + name]]
+                        txt += [self.__query[p][f'loans_agg|{name}']]
                 else:
                     txt += [self.__query[p]['payments_agg']]
                     txt += [self.__query[p]['loans_agg']]
                 txt += [self.__query[p]['overview']]
                 if self.__table_for_each_variable:
                     for name in self.__ratio_names:
-                        txt += [self.__query[p]['ratio|' + name]]
+                        txt += [self.__query[p][f'ratio|{name}']]
                 else:
                     txt += [self.__query[p]['ratio']]
-                open(output_dir + '/' + p + '/01_script.sql', 'w').write(('\n' * 8).join(txt))
+                open(f'{output_dir}/{p}/01_script.sql', 'w').write(('\n' * 8).join(txt))
             elif not split_scripts:
                 txt = self.__query[p]['loans_and_payments']
-                open(output_dir + '/' + p + '/01_create_loans_and_payments_script.sql', 'w').write(txt)
+                open(f'{output_dir}/{p}/01_create_loans_and_payments_script.sql', 'w').write(txt)
 
                 txt = []
                 if self.__table_for_each_variable:
                     for name in self.__pay_loan_names:
-                        txt += [self.__query[p]['payments_agg|' + name]]
+                        txt += [self.__query[p][f'payments_agg|{name}']]
                     for name in self.__loan_names:
-                        txt += [self.__query[p]['loans_agg|' + name]]
+                        txt += [self.__query[p]['loans_agg|{name}']]
                 else:
                     txt += [self.__query[p]['payments_agg']]
                     txt += [self.__query[p]['loans_agg']]
-                open(output_dir + '/' + p + '/02_create_vars_script.sql', 'w').write(('\n' * 8).join(txt))
+                open(f'{output_dir}/{p}/02_create_vars_script.sql', 'w').write(('\n' * 8).join(txt))
 
                 txt = self.__query[p]['overview']
-                open(output_dir + '/' + p + '/03_create_overview_vars_script.sql', 'w').write(txt)
+                open(f'{output_dir}/{p}/03_create_overview_vars_script.sql', 'w').write(txt)
 
                 txt = []
                 if self.__table_for_each_variable:
                     for name in self.__ratio_names:
-                        txt += [self.__query[p]['ratio|' + name]]
+                        txt += [self.__query[p][f'ratio|{name}']]
                 else:
                     txt += [self.__query[p]['ratio']]
-                open(output_dir + '/' + p + '/04_create_ratio_vars_script.sql', 'w').write(('\n' * 8).join(txt))
+                open(f'{output_dir}/{p}/04_create_ratio_vars_script.sql', 'w').write(('\n' * 8).join(txt))
             else:
                 txt = self.__query[p]['loans_and_payments']
-                open(output_dir + '/' + p + '/01_create_loans_and_payments_script.sql', 'w').write(txt)
+                open(f'{output_dir}/{p}/01_create_loans_and_payments_script.sql', 'w').write(txt)
 
                 for name in self.__pay_loan_names:
                     txt = self.__query[p]['payments_agg|' + name]
-                    open(output_dir + '/' + p + '/02_create_' + name + '_vars_script.sql', 'w').write(txt)
+                    open(f'{output_dir}/{p}/02_create_{name}_vars_script.sql', 'w').write(txt)
                 for name in self.__loan_names:
-                    txt = self.__query[p]['loans_agg|' + name]
-                    open(output_dir + '/' + p + '/02_create_' + name + '_vars_script.sql', 'w').write(txt)
+                    txt = self.__query[p][f'loans_agg|{name}']
+                    open(f'{output_dir}/{p}/02_create_{name}_vars_script.sql', 'w').write(txt)
 
                 txt = self.__query[p]['overview']
-                open(output_dir + '/' + p + '/03_create_overview_vars_script.sql', 'w').write(txt)
+                open(f'{output_dir}/{p}/03_create_overview_vars_script.sql', 'w').write(txt)
 
                 for name in self.__ratio_names:
-                    txt = self.__query[p]['ratio|' + name]
-                    open(output_dir + '/' + p + '/04_create_' + name + '_vars_script.sql', 'w').write(txt)
+                    txt = self.__query[p][f'ratio|{name}']
+                    open(f'{output_dir}/{p}/04_create_{name}_vars_script.sql', 'w').write(txt)
 
-    def read_data(self,
-                  ch,
-                  base_schema_table,
-                  base_table_id,
-                  process,
-                  join_how='inner',
-                  reducing_memory_func=None):
-        query = 'SELECT *\nFROM ' + base_schema_table
+    def read_data(
+            self,
+            ch,
+            base_schema_table: str,
+            base_table_id: str,
+            process: str,
+            join_how: str = 'inner',
+            reducing_memory_func: Optional[Callable] = None,
+    ) -> pd.DataFrame:
+        query = f'SELECT *\nFROM {base_schema_table}'
         data = pd.read_sql(query, ch)
         if reducing_memory_func is not None:
             data = reducing_memory_func(data)
@@ -459,9 +516,10 @@ class FE:
                 id = self.__loans_info['group_by'] if 'verview' not in name else self.__appl_info['id']
             else:
                 id = self.__loans_info['group_by'] if 'agg' in name else self.__appl_info['id']
-            query = 'SELECT n.*\nFROM ' + base_schema_table + ' AS b\n'
-            query += 'INNER JOIN ' + self.__schema_prefix + name + self.__processes[process] + ' AS n\n'
-            query += 'ON b.' + base_table_id + ' = n.' + id
+            query = f'''SELECT n.*
+            FROM {base_schema_table} AS b
+            INNER JOIN {self.__schema_prefix}{name}{self.__processes[process]} AS n
+            ON b.{base_table_id} = n.{id}'''
             tmp_data = pd.read_sql(query, ch)
             if reducing_memory_func is not None:
                 tmp_data = reducing_memory_func(tmp_data)
@@ -474,14 +532,21 @@ class FE:
         return data
 
     @staticmethod
-    def feature_name(feature):
+    def feature_name(
+            feature: str,
+    ) -> str:
         return re.sub('_[A-Za-z]{3}[0-9]{2}', '', feature)
 
     @staticmethod
-    def feature_fltr(feature):
+    def feature_fltr(
+            feature: str,
+    ) -> List[str]:
         return [i[1:] for i in re.findall('_[A-Za-z]{3}[0-9]{2}', feature)]
 
-    def feature_description(self, feature):
+    def feature_description(
+            self,
+            feature: str,
+    ) -> str:
         if feature[-6:] != '_RATIO':
             fltr = self.feature_fltr(feature)
             name = self.feature_name(feature)
@@ -505,25 +570,31 @@ class FE:
                     feat_split[1]) + '}'
         return description + '.'
 
-    def features_description(self,
-                             features,
-                             n_threads=1):
+    def features_description(
+            self,
+            features: List[str],
+            n_threads: int = 1,
+    ) -> Dict[str, str]:
         if isinstance(features, str):
             feat = [features]
         else:
             feat = features.copy()
 
-        descr = pool_map(func=self.feature_description,
-                         iterable=feat,
-                         n_threads=n_threads)
+        descr = pool_map(
+            func=self.feature_description,
+            iterable=feat,
+            n_threads=n_threads
+        )
 
         features_dict = {}
         for f, d in zip(feat, descr):
             features_dict[f] = d
         return features_dict
 
-    def create_terms_of_reference(self,
-                                  features):
+    def create_terms_of_reference(
+            self,
+            features: List[str],
+    ) -> pd.DataFrame:
         def is_ratio(feat_arr):
             return feat_arr.str[-6:] == '_RATIO'
 
