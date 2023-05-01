@@ -5,4 +5,4 @@ This is my Bachelor's degree work [[text in Russian]](https://docs.google.com/do
 made for automatisation of credit scoring 
 modelling processes in the URALSIB bank.
 
-Further modified and sometimes and sometimes used in other projects.
+Further modified and sometimes used in other projects.
